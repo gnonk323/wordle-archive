@@ -33,7 +33,6 @@ async def read_root():
 
 @app.post("/sync")
 async def sync_user_games():
-  """Frontend sends the cookie, backend calculates missing dates and fills the DB"""
   try:
     cookie = os.getenv("NYT_COOKIE")
     result = await run_sync(cookie)
@@ -41,7 +40,7 @@ async def sync_user_games():
   except ValueError as e:
     return { "status": "error", "message": str(e) }
   except Exception as e:
-    return { "status": "error", "message": "Internal server error during sync" }
+    return { "status": "error", "message": "Internal server error during sync", e }
 
 
 @app.get("/games")
