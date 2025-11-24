@@ -12,7 +12,7 @@ const userId = ref('');
 const loading = ref(true);
 const syncStatus = ref('');
 const lastSynced = ref('');
-const apiBaseUrl = 'http://localhost:8080';
+const apiBaseUrl = '/api';
 
 const fetchGames = async () => {
   loading.value = true;
