@@ -1,0 +1,39 @@
+services:
+  # MongoDB
+  mongo:
+    image: mongo:latest
+    container_name: wordle_mongo
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wordle_backend
+    ports:
+      - "8080:8000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/wordle_app
+      - NYT_COOKIE=nyt-a=xZ3mdjLXukXBnmUfnBgnVt; _cb=Cm3n7lVAHm9DwS8AE; purr-pref-agent=<G_<C_<T0<Tp1_<Tp2_<Tp3_<Tp4_<Tp7_<a0_; _scid=A6UApq-67BAED8xxPnxZPh66zCHnVl2T; _sctr=1%7C1731819600000; _scid_r=HSUApq-67BAED8xxPnxZPh66zCHnVl2T-WRmfg; iter_id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb21wYW55X2lkIjoiNWMwOThiM2QxNjU0YzEwMDAxMmM2OGY5IiwidXNlcl9pZCI6IjY1NTFjOTYwMmFhOWY2MDAwMTE2NzVmOCIsInVzZXJfaWRfZXh0Ijp0cnVlLCJpYXQiOjE3MzMwNjMwODh9.V4fHUGLF7E5a8l0nyfoJgWZCNNmfbD_iJT6kYGYemXM; nyt-purr=cfshcfhshckfhdfhhgah2taaa; datadome=MYNeDrBjZQ5HIZ9CNccuBwWVUg49ayekQtACCf3CcC9~FbxGa1aAd94_OWslPnCpV2bplmSCfKYMyVrQWKau6DdedwDcpWc3RT8nebrvGj8GPqb0n8LDxClFlPNBAypn; _chartbeat2=.1699858782661.1740260090443.0000000000000001.h0hrXDxrWXB1bWLnCkzOtBCtbKyI.2; purr-cache=<G_<C_<T0<Td_<Tp1_<Tp2_<Tp3_<Tp4_<Tp7_<a12<K0<S0<rUS-CT<ur; nyt-auth-method=username; regi_cookie=ftol=false&news_tenure=1340&regi_id=149113006; nyt-m=B52D1842A61AA1E7A82516DFA36C0FC7&ira=i.0&uuid=s.43dec4ef-865a-4fd3-8a86-74dc7c2cd1c9&rc=i.0&igu=i.1&igd=i.0&igf=i.0&iir=i.0&ica=i.0&iub=i.0&ft=i.0&prt=i.0&iue=i.1&ier=i.0&iga=i.0&v=i.0&n=i.2&pr=l.4.0.0.0.0&fv=i.0&cav=i.0&imu=i.1&ird=i.0&e=i.1764597600&t=i.0&g=i.0&er=i.1763754590&ifv=i.0&iru=i.1&vp=i.0&s=s.crosswords&vr=l.4.0.0.0.0&imv=i.0; nyt-gdpr=0; nyt-jkidd=uid=149113006&lastRequest=1763916448810&activeDays=%5B0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C0%2C1%2C1%2C0%2C1%2C1%2C0%2C0%2C1%2C1%2C1%5D&adv=7&a7dv=5&a14dv=7&a21dv=7&lastKnownType=sub&newsStartDate=1647372599&entitlements=AAA+AUD+CKG+MM+MOW+MSD+MTD+WC+XWD; NYT-S=0^CB0SNgjusd7IBhC_-YzJBhoSMS1EDaPPmtYeQuvv4SAdnr0cIK6RjUcqAh5XONuJiP0FQgUI7du9CxpAevv20R3p__UiBIf28tw3MN4ardEY8iKuUW56sBUiaYgxC0szyI1iAR3IvcJiPg9-7OHfk6OPirWsUkp31ryTAw==
+      - USER_ID=149113006
+    depends_on:
+      - mongo
+    restart: always
+
+  # Vue Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wordle_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  mongo_data:

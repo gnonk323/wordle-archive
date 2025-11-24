@@ -12,7 +12,7 @@ const userId = ref('');
 const loading = ref(true);
 const syncStatus = ref('');
 const lastSynced = ref('');
-const apiBaseUrl = 'http://localhost:8001';
+const apiBaseUrl = 'http://localhost:8080';
 
 const fetchGames = async () => {
   loading.value = true;
@@ -187,7 +187,7 @@ onMounted(() => {
       </p>
       <p>
         Last contentful sync:
-        {{ lastSynced ? (isNaN(Date.parse(lastSynced)) ? lastSynced : new Date(lastSynced).toLocaleString()) : 'Never' }}
+        {{ lastSynced ? (isNaN(Date.parse(lastSynced)) ? lastSynced : new Date(lastSynced).toUTCString()) : 'Never' }}
       </p>
     </div>
     <button @click="syncData" :disabled="syncStatus === 'Syncing...'" class="sync-button">
