@@ -36,7 +36,6 @@ async def sync_user_games():
   """Frontend sends the cookie, backend calculates missing dates and fills the DB"""
   try:
     cookie = os.getenv("NYT_COOKIE")
-    # TODO: find a reasonable way to pass cookie from frontend
     result = await run_sync(cookie)
     return result
   except ValueError as e:
