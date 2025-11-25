@@ -210,6 +210,7 @@ const downloadGames = () => {
 
 onMounted(() => {
   fetchGames();
+  document.title = "Wordle Stats Archive"
 });
 </script>
 
