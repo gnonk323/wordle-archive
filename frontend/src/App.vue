@@ -31,10 +31,17 @@ const fetchGames = async () => {
 const syncData = async () => {
   syncStatus.value = 'Syncing...';
   try {
-    await axios.post(`${apiBaseUrl}/sync`);
-    syncStatus.value = 'Sync successful! Fetching new data...';
-    await fetchGames();
-    syncStatus.value = 'Sync successful and data updated!';
+    const response = await axios.post(`${apiBaseUrl}/sync`);
+    if (response.data.status === "already_up_to_date") {
+      syncStatus.value = 'Archive already up to date!'
+    } else if (response.data.status === "no_ids_found") {
+      syncStatus.value = 'No puzzle IDs found.'
+    } else if (response.data.added === 0) {
+      syncStatus.value = 'Sync executed, no new puzzles added.'
+    } else {
+      syncStatus.value = `Sync successful! Added ${response.data.added} new puzzle records. Fetching new data...`;
+      await fetchGames();
+    }
   } catch (error) {
     console.error('Error syncing data:', error);
     syncStatus.value = `Sync failed: ${error.message}`;
@@ -84,6 +91,9 @@ const chartData = computed(() => {
     }
     return '';
   });
+
+  const allPrintDates = finishedGames.map(game => game.print_date);
+  const allSolutions = finishedGames.map(game => game.solution);
   
   return {
     labels: labels,
@@ -97,7 +107,9 @@ const chartData = computed(() => {
             ? game.game_data.currentRowIndex
             : 7
         ),
-        tension: 0.3
+        tension: 0.3,
+        printDates: allPrintDates,
+        solutions: allSolutions,
       }
     ]
   };
@@ -127,48 +139,73 @@ const chartOptions = {
         text: 'Date'
       },
       ticks: {
-          autoSkip: false,
-          maxRotation: 45,
-          minRotation: 45,
-          callback: function(val, index) {
-              return this.getLabelForValue(val) !== '' ? this.getLabelForValue(val) : null;
-          }
+        autoSkip: false,
+        maxRotation: 45,
+        minRotation: 45,
+        callback: function(val, index) {
+          return this.getLabelForValue(val) !== '' ? this.getLabelForValue(val) : null;
+        }
       },
       grid: {
         drawOnChartArea: true,
         color: (context) => {
-            const label = context.chart.data.labels[context.tick.value];
-            return label !== '' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.0)';
+          const label = context.chart.data.labels[context.tick.value];
+          return label !== '' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.0)';
         }
       }
     }
   },
   plugins: {
     tooltip: {
-        callbacks: {
-            label: function(context) {
-                let label = context.dataset.label || '';
-                if (label) {
-                    label += ': ';
-                }
-                if (context.parsed.y === 7) {
-                    label += 'FAIL (6/6 attempts)';
-                } else {
-                    label += context.parsed.y;
-                }
-                return label;
-            }
-        }
+      displayColors: false,
+      callbacks: {
+        title: function(context) {
+          const dataIndex = context[0].dataIndex;
+          const printDate = context[0].dataset.printDates[dataIndex];
+          return printDate
+        },
+        label: function(context) {
+          let label = context.dataset.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y === 7) {
+            label += 'FAIL (6/6 attempts)';
+          } else {
+            label += context.parsed.y;
+          }
+          const dataIndex = context.dataIndex;
+          const solution = context.dataset.solutions[dataIndex];
+
+          return [
+            label,
+            `${solution}`
+          ];
+        },
+      }
     }
   }
 };
 
 const getTurns = (game) => {
-    return game.game_data.currentRowIndex;
+  return game.game_data.currentRowIndex;
 };
 
 const getWordleUrl = (dateStr) => {
-    return `https://www.nytimes.com/games/wordle/${dateStr}`;
+  return `https://www.nytimes.com/games/wordle/${dateStr}`;
+};
+
+const downloadGames = () => {
+  const json = JSON.stringify(games.value, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "wordle_games.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
 };
 
 onMounted(() => {
@@ -191,7 +228,7 @@ onMounted(() => {
       </p>
     </div>
     <button @click="syncData" :disabled="syncStatus === 'Syncing...'" class="sync-button">
-      {{ syncStatus === 'Syncing...' ? 'Syncing...' : 'Sync My Archive Data' }}
+      {{ syncStatus === 'Syncing...' ? 'Syncing...' : 'Sync Archive Data' }}
     </button>
     <p v-if="syncStatus && syncStatus !== 'Syncing...'" class="sync-message">{{ syncStatus }}</p>
 
@@ -205,7 +242,9 @@ onMounted(() => {
 
     <div v-else>
       <section class="stats-summary">
-        <h2>📊 Overall Statistics</h2>
+        <div class="header">
+          <h2>📊 Overall Statistics</h2>
+        </div>
         <div class="stat-cards">
           <div class="card">
             <h3>Total Games Played</h3>
@@ -225,7 +264,9 @@ onMounted(() => {
       <hr>
 
       <section class="guess-chart">
-        <h2>📈 Guess Progression Over Time</h2>
+        <div class="header">
+          <h2>📈 Guess Progression Over Time</h2>
+        </div>
         <div class="chart-container">
           <Line :data="chartData" :options="chartOptions" :key="games.length" />
         </div>
@@ -234,7 +275,12 @@ onMounted(() => {
       <hr>
 
       <section class="games-list">
-        <h2>🗓️ Game History</h2>
+        <div class="header">
+          <h2>🗓️ Game History</h2>
+          <button @click="downloadGames" class="download-button">
+            Download JSON
+          </button>
+        </div>
         <table>
           <thead>
             <tr>
@@ -252,6 +298,7 @@ onMounted(() => {
                 <span v-if="game.game_data.status === 'WIN'">{{ getTurns(game) }}/6</span>
                 <span v-else-if="game.game_data.status === 'FAIL'">X/6</span>
                 <span v-else>N/A</span>
+                <span v-if="game.game_data.hardMode">*</span>
               </td>
               <td>
                 <span :class="{'win': game.game_data.status === 'WIN', 'fail': game.game_data.status === 'FAIL'}">
@@ -273,6 +320,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #34495e;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
 .userinfo {
   display: flex;
   justify-content: space-between;
@@ -314,23 +371,16 @@ h1 {
 }
 
 .sync-message {
-    text-align: center;
-    font-weight: bold;
-    margin-bottom: 20px;
-    color: #3498db;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #3498db;
 }
 
 hr {
   margin: 40px 0;
   border: 0;
   border-top: 1px solid #eee;
-}
-
-.stats-summary h2, .guess-chart h2, .games-list h2 {
-    color: #34495e;
-    border-bottom: 2px solid #ecf0f1;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
 }
 
 .stat-cards {
@@ -409,6 +459,23 @@ tr:nth-child(even) {
 
 .wordle-link-button:hover {
   background-color: #2980b9;
+}
+
+.download-button {
+  display: block;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.download-button:hover {
+  background-color: #45a049;
 }
 
 .loading-message, .no-data-message {
