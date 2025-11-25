@@ -40,7 +40,7 @@ async def sync_user_games():
   except ValueError as e:
     return { "status": "error", "message": str(e) }
   except Exception as e:
-    return { "status": "error", "message": "Internal server error during sync", e }
+    return { "status": "error", "message": f"Internal server error during sync: {e}", }
 
 
 @app.get("/games")
